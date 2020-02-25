@@ -1,0 +1,14 @@
+{
+    "template": ".//output//template.json",
+    "data": {
+        "00100010": {
+            "Value": [
+                {
+                    "Alphabetic": "John^Doe"
+                }
+            ],
+            "vr": "PN"
+        }
+    },
+    "image": ".//input//face_8b.png"
+}
