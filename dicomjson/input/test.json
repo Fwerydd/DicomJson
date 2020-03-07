@@ -1,5 +1,5 @@
 {
-    "template": "C:\\Users\\flori\\Documents\\Florian\\Projets\\DicomJson\\dicomjson\\input\\1.2.250.1.118.3.1304.229.1.1556.89.json",
+    "template": "C:\\Users\\test\\Documents\\test\\Projets\\DicomJson\\dicomjson\\input\\1.2.250.1.118.3.1304.229.1.1556.89.json",
     "data": {
         "00100010": {
             "Value": [
@@ -10,5 +10,5 @@
             "vr": "PN"
         }
     },
-    "image": "C:\\Users\\flori\\Documents\\Florian\\Projets\\DicomJson\\dicomjson\\input\\red-panda-23538-1920x1200.png"
+    "image": "C:\\Users\\test\\Documents\\test\\Projets\\DicomJson\\dicomjson\\input\\red-panda-23538-1920x1200.png"
 }

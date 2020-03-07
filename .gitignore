@@ -129,3 +129,4 @@ dmypy.json
 .pyre/
 /dicomjson/output
 /dicomjson/input/*.dcm
+/dicomjson/input/*.png
