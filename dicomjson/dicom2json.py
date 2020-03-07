@@ -9,11 +9,9 @@ from pathlib import Path
 from pydicom import dcmread
 from pydicom.errors import InvalidDicomError
 from pydicom.dataset import Dataset, FileDataset
-from constants import JsonConstants
+from constants import JsonConstants, PngConstants
 
 DEFAULT_OUTPUT_DIR = Path(__file__).parent / Path("output")
-JSON_SUFFIX = ".json"
-PNG_SUFFIX = ".png"
 logger = logging.getLogger()
 
 
@@ -71,8 +69,10 @@ def dicom2json(input_file, remove_dicom_fields):
 
         # Format output filepath
         output_filepath = (DEFAULT_OUTPUT_DIR / dicom_dataset.SOPInstanceUID)
-        output_dataset_filepath = output_filepath.with_suffix(JSON_SUFFIX)
-        output_image_filepath = output_filepath.with_suffix(PNG_SUFFIX)
+        output_dataset_filepath = output_filepath.with_suffix(
+            JsonConstants.SUFFIX.value)
+        output_image_filepath = output_filepath.with_suffix(
+            PngConstants.SUFFIX.value)
 
         # Write JSON file
         dicom_json_file = open(output_dataset_filepath, "w")
