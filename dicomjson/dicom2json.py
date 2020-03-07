@@ -1,15 +1,19 @@
 #!/bin/bash
 
 import argparse
+import cv2
 import json
 import logging
+import numpy as np
 from pathlib import Path
 from pydicom import dcmread
 from pydicom.errors import InvalidDicomError
 from pydicom.dataset import Dataset, FileDataset
+from constants import JsonConstants
 
 DEFAULT_OUTPUT_DIR = Path(__file__).parent / Path("output")
 JSON_SUFFIX = ".json"
+PNG_SUFFIX = ".png"
 logger = logging.getLogger()
 
 
@@ -26,17 +30,31 @@ def my_json_dumps(data):
     return json.dumps(data, indent=4, sort_keys=True)
 
 
-def dicom2json(input_file, output_filename, remove_dicom_fields):
+def dicom2json(input_file, remove_dicom_fields):
     """dicom2json
     Convert DICOM file to JSON using pydicom library
 
     Arguments:
         input_file {str} -- DICOM file location
-        output_filename {str} -- JSON output file location
         remove_dicom_fields {list} -- DICOM field name to not save in JSON
     """
     try:
         dicom_dataset = dcmread(str(input_file))
+
+        # Extract image from PixelData DICOM file
+        img_dtype = None
+        if dicom_dataset.BitsStored == 8:
+            img_dtype = np.uint8
+        elif dicom_dataset.BitsStored == 16:
+            img_dtype = np.uint16
+        else:
+            error = "Unrecognized DICOM BitsStored value '{}'".format(
+                dicom_dataset.BitsStored)
+            raise ValueError(error)
+
+        dicom_image = np.ndarray((dicom_dataset.Rows, dicom_dataset.Columns),
+                                 img_dtype,
+                                 dicom_dataset.PixelData)
 
         if remove_dicom_fields:
             for dicom_fields_name in remove_dicom_fields:
@@ -52,22 +70,23 @@ def dicom2json(input_file, output_filename, remove_dicom_fields):
         dicom_dataset_to_json = dicom_dataset.to_json_dict()
 
         # Format output filepath
-        output_filepath = None
-        if output_filename:
-            output_filepath = (DEFAULT_OUTPUT_DIR / Path(output_filename))
-        else:
-            output_filepath = (
-                DEFAULT_OUTPUT_DIR / dicom_dataset.SOPInstanceUID).with_suffix(JSON_SUFFIX)
+        output_filepath = (DEFAULT_OUTPUT_DIR / dicom_dataset.SOPInstanceUID)
+        output_dataset_filepath = output_filepath.with_suffix(JSON_SUFFIX)
+        output_image_filepath = output_filepath.with_suffix(PNG_SUFFIX)
 
         # Write JSON file
-        dicom_json_file = open(output_filepath, "w")
+        dicom_json_file = open(output_dataset_filepath, "w")
         dicom_json_file.write(my_json_dumps(
-            {"meta": dicom_dataset_to_json_meta, "data": dicom_dataset_to_json}))
+            {JsonConstants.META.value: dicom_dataset_to_json_meta,
+             JsonConstants.DATA.value: dicom_dataset_to_json}))
         dicom_json_file.close()
-        print("Output file has been writed at: '{}'".format(output_filepath))
+        cv2.imwrite(str(output_image_filepath), dicom_image)
+        print("Output files have been writed at: '{}' and '{}'".format(
+            output_dataset_filepath, output_image_filepath))
     except (FileNotFoundError,
             InvalidDicomError,
-            PermissionError) as error:
+            PermissionError,
+            UnboundLocalError) as error:
         raise error
 
 
@@ -90,12 +109,6 @@ def main():
 
     # Optionals arguments
     parser.add_argument(
-        "-o",
-        "--output_filename",
-        type=str,
-        help="output filename",
-        default=None)
-    parser.add_argument(
         "-rdf",
         "--remove_dicom_fields",
         nargs='+',
@@ -117,9 +130,8 @@ def main():
 
     try:
         dicom2json(input_filepath,
-                   args.output_filename,
                    args.remove_dicom_fields)
-    except:
+    except Exception as error:
         raise error
 
 
