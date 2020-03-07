@@ -2,12 +2,15 @@
 
 import argparse
 import json
+import logging
 from pathlib import Path
-import pydicom
+from pydicom import dcmread
+from pydicom.errors import InvalidDicomError
 from pydicom.dataset import Dataset, FileDataset
 
 DEFAULT_OUTPUT_DIR = Path(__file__).parent / Path("output")
 JSON_SUFFIX = ".json"
+logger = logging.getLogger()
 
 
 def my_json_dumps(data):
@@ -33,15 +36,16 @@ def dicom2json(input_file, output_filename, remove_dicom_fields):
         remove_dicom_fields {list} -- DICOM field name to not save in JSON
     """
     try:
-        dicom_dataset = pydicom.dcmread(str(input_file))
+        dicom_dataset = dcmread(str(input_file))
 
         if remove_dicom_fields:
             for dicom_fields_name in remove_dicom_fields:
                 if dicom_dataset.get(dicom_fields_name):
                     dicom_dataset.pop(dicom_fields_name)
                 else:
-                    print("Unrecognized DICOM field named '{}'".format(
-                        dicom_fields_name))
+                    error = "Unrecognized DICOM field named '{}'".format(
+                        dicom_fields_name)
+                    logger.warning(error)
 
         # Convert FileDataset to JSON object
         dicom_dataset_to_json_meta = dicom_dataset.file_meta.to_json_dict()
@@ -61,8 +65,10 @@ def dicom2json(input_file, output_filename, remove_dicom_fields):
             {"meta": dicom_dataset_to_json_meta, "data": dicom_dataset_to_json}))
         dicom_json_file.close()
         print("Output file has been writed at: '{}'".format(output_filepath))
-    except FileNotFoundError as file_not_found_error:
-        print(file_not_found_error)
+    except (FileNotFoundError,
+            InvalidDicomError,
+            PermissionError) as error:
+        raise error
 
 
 def main():
@@ -101,18 +107,28 @@ def main():
 
     input_filepath = Path(args.input_file)
     if not input_filepath.exists():
-        print("{} does not exists, abort dicom2json execution!".format(input_filepath))
-        return 1
+        error = "{} does not exists, abort dicom2json execution!".format(
+            input_filepath)
+        raise ValueError(error)
     if not input_filepath.is_file():
-        print("{} is not a file, abort dicom2json execution!".format(input_filepath))
-        return 2
+        error = "{} is not a file, abort dicom2json execution!".format(
+            input_filepath)
+        raise ValueError(error)
 
-    return dicom2json(input_filepath,
-                      args.output_filename,
-                      args.remove_dicom_fields)
+    try:
+        dicom2json(input_filepath,
+                   args.output_filename,
+                   args.remove_dicom_fields)
+    except:
+        raise error
 
 
 if __name__ == "__main__":
     """Entry point of the script
     """
-    exit(main())
+    try:
+        main()
+        exit(0)
+    except ValueError as error:
+        logger.exception(error)
+        exit(1)
