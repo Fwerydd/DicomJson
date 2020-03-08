@@ -30,6 +30,21 @@ optional arguments:
       * "template": Path to JSON file extracted from dicom2json.py script
         * It will be used as template for your DICOM generation
       * "data": DICOM data described as you can see in the dicom2json.py output file. If a data is present in this field, you'll override the DICOM field value available in "template".
+        ```
+        For example, if you want to override PatientName DICOM field value, you need to write in your *.json file:
+        {
+          "data": {
+              "00100010": {
+                  "Value": [
+                      {
+                          "Alphabetic": "John^Doe"
+                      }
+                  ],
+                  "vr": "PN"
+              }
+          }
+        }
+        ```
       * "meta": DICOM metadata described as you can see in the dicom2json.py output file. If a data is present in this field, you'll override the DICOM field value available in "template".
       * "image": Image filepath to override the following DICOM fields:
         * BitsAllocated
