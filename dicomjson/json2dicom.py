@@ -21,11 +21,6 @@ def json2dicom(input_filepath, output_filename):
         input_file = open(input_filepath, "r")
         input_json = json.loads(input_file.read())
 
-        if not JsonConstants.DATA.value in input_json:
-            error = "Cannot find mandatory JSON field name '{}' in '{}'".format(
-                JsonConstants.DATA.value, str(input_filepath))
-            raise ValueError(error)
-
         if not JsonConstants.TEMPLATE.value in input_json:
             error = "Cannot find mandatory JSON field name '{}' in '{}'".format(
                 JsonConstants.TEMPLATE.value, str(input_filepath))
