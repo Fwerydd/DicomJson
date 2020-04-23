@@ -74,3 +74,7 @@ You can install all requirements for this repository using the following command
 ```
 pip install -r requirements.txt
 ```
+
+Known issues
+-------------
+The pydicom Python library cannot extract DICOM fields with 'DS' as VR type and field value with only '\' as characters
