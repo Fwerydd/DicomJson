@@ -44,6 +44,8 @@ def json2dicom(input_filepath, output_filename):
             current_json[JsonConstants.DATA.value].update(
                 input_json[JsonConstants.DATA.value])
 
+        dicom_dataset = Dataset()
+        dicom_meta = Dataset()
         try:
             dicom_dataset = Dataset().from_json(
                 current_json[JsonConstants.DATA.value])
