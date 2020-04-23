@@ -54,37 +54,39 @@ def json2dicom(input_filepath, output_filename):
                 exception_error)
             raise ValueError(error)
 
-        image_json_data = input_json[JsonConstants.IMAGE.value]
-        if image_json_data:
+        # Override image in the DICOM if 'image' key is present
+        if JsonConstants.IMAGE.value in input_json:
+            image_json_data = input_json[JsonConstants.IMAGE.value]
             if image_json_data:
-                image_filepath = Path(image_json_data)
-                if not image_filepath.exists():
-                    error = "'{}' image file does not exists, abort json2dicom execution!".format(
+                if image_json_data:
+                    image_filepath = Path(image_json_data)
+                    if not image_filepath.exists():
+                        error = "'{}' image file does not exists, abort json2dicom execution!".format(
+                            image_filepath)
+                        raise ValueError(error)
+                if not image_filepath.is_file():
+                    error = "'{}' image is not a file, abort json2dicom execution!".format(
                         image_filepath)
                     raise ValueError(error)
-            if not image_filepath.is_file():
-                error = "'{}' image is not a file, abort json2dicom execution!".format(
-                    image_filepath)
-                raise ValueError(error)
 
-            image = cv2.imread(str(image_filepath),
-                               flags=cv2.IMREAD_UNCHANGED)
-            shape = image.shape
-            bit_depth = None
-            if len(shape) < 3:
-                bit_depth = 8 * image.dtype.itemsize
-            else:
-                error = "Cannot manage image with bit depth > 16 bits"
-                raise ValueError(error)
+                image = cv2.imread(str(image_filepath),
+                                   flags=cv2.IMREAD_UNCHANGED)
+                shape = image.shape
+                bit_depth = None
+                if len(shape) < 3:
+                    bit_depth = 8 * image.dtype.itemsize
+                else:
+                    error = "Cannot manage image with bit depth > 16 bits"
+                    raise ValueError(error)
 
-            dicom_dataset.BitsAllocated = bit_depth
-            dicom_dataset.BitsStored = bit_depth
-            dicom_dataset.HighBits = bit_depth - 1
-            dicom_dataset.WindowCenter = pow(2, bit_depth - 1)
-            dicom_dataset.WindowWidth = pow(2, bit_depth) - 1
-            dicom_dataset.Rows = shape[0]
-            dicom_dataset.Columns = shape[1]
-            dicom_dataset.PixelData = image
+                dicom_dataset.BitsAllocated = bit_depth
+                dicom_dataset.BitsStored = bit_depth
+                dicom_dataset.HighBits = bit_depth - 1
+                dicom_dataset.WindowCenter = pow(2, bit_depth - 1)
+                dicom_dataset.WindowWidth = pow(2, bit_depth) - 1
+                dicom_dataset.Rows = shape[0]
+                dicom_dataset.Columns = shape[1]
+                dicom_dataset.PixelData = image
 
         # Format output filepath
         output_filepath = None
