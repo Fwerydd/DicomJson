@@ -39,13 +39,20 @@ def json2dicom(input_filepath, output_filename):
         template_file = open(template_filepath, "r")
         current_json = json.loads(template_file.read())
 
-        # Override template object
-        current_json[JsonConstants.DATA.value].update(
-            input_json[JsonConstants.DATA.value])
-        dicom_dataset = Dataset().from_json(
-            current_json[JsonConstants.DATA.value])
-        dicom_meta = Dataset().from_json(
-            current_json[JsonConstants.META.value])
+        # Override template object if 'data' key is present
+        if JsonConstants.DATA.value in input_json:
+            current_json[JsonConstants.DATA.value].update(
+                input_json[JsonConstants.DATA.value])
+
+        try:
+            dicom_dataset = Dataset().from_json(
+                current_json[JsonConstants.DATA.value])
+            dicom_meta = Dataset().from_json(
+                current_json[JsonConstants.META.value])
+        except (json.JSONDecodeError, TypeError, ValueError) as exception_error:
+            error = "Error encountered during JSON parsing: '{}', abort json2dicom execution!".format(
+                exception_error)
+            raise ValueError(error)
 
         image_json_data = input_json[JsonConstants.IMAGE.value]
         if image_json_data:
