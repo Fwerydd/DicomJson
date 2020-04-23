@@ -52,7 +52,7 @@ def json2dicom(input_filepath, output_filename):
             dicom_meta = Dataset().from_json(
                 current_json[JsonConstants.META.value])
         except (json.JSONDecodeError, TypeError, ValueError) as exception_error:
-            error = "Error encountered during JSON parsing: '{}', abort json2dicom execution!".format(
+            error = "Error encountered during JSON parsing: \"{}\", abort json2dicom execution!".format(
                 exception_error)
             raise ValueError(error)
 
