@@ -46,9 +46,25 @@ def json2dicom(input_filepath, output_filename):
 
         dicom_dataset = Dataset()
         dicom_meta = Dataset()
+
+        # Parse each data DICOM value, to test if valid
+        data_dict = current_json[JsonConstants.DATA.value]
+        dicom_fields_with_error = []
+        for dicom_json_value in data_dict:
+            dicom_dict = {
+                dicom_json_value: data_dict.get(dicom_json_value)}
+            try:
+                Dataset().from_json(json.dumps(dicom_dict))
+            except (json.JSONDecodeError, TypeError, ValueError) as exception_error:
+                dicom_fields_with_error.append(dicom_json_value)
+                print("Cannot add the field '{}', because the value is not standard with the VR: '{}'".format(
+                    dicom_json_value, dicom_dict))
+        # Remove error DICOM fields
+        for dicom_field_with_error in dicom_fields_with_error:
+            del data_dict[dicom_field_with_error]
+
         try:
-            dicom_dataset = Dataset().from_json(
-                current_json[JsonConstants.DATA.value])
+            dicom_dataset = Dataset().from_json(data_dict)
             dicom_meta = Dataset().from_json(
                 current_json[JsonConstants.META.value])
         except (json.JSONDecodeError, TypeError, ValueError) as exception_error:
