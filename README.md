@@ -20,7 +20,8 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   -rdf REMOVE_DICOM_FIELDS [REMOVE_DICOM_FIELDS ...], --remove_dicom_fields REMOVE_DICOM_FIELDS [REMOVE_DICOM_FIELDS ...]
-                        remove DICOM fields after extraction
+                        remove DICOM fields after extraction. The list of possible values is available in the file '_dicom_dict.py' at the root of the folder where  
+                        the 'Keyword' for each field is specified.
 ```
 
 **json2dicom**

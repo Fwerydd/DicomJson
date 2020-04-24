@@ -108,12 +108,15 @@ def main():
         help="dicom to convert to json")
 
     # Optionals arguments
+    remove_dicom_fields_help = "remove DICOM fields after extraction. \
+        The list of possible values is available in the file '_dicom_dict.py' at \
+            the root of the folder where the 'Keyword' for each field is specified."
     parser.add_argument(
         "-rdf",
         "--remove_dicom_fields",
         nargs='+',
         type=str,
-        help="remove DICOM fields after extraction",
+        help=remove_dicom_fields_help,
         default=None)
 
     args = parser.parse_args()
