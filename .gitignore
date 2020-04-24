@@ -127,6 +127,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
 /dicomjson/output
 /dicomjson/input/*.dcm
 /dicomjson/input/*.png
+.vscode
+*.dcm
