@@ -12,7 +12,7 @@ You will find in this repository two scripts.
   * One PNG file represent the image available in the PixelData DICOM field
 
 ```
-usage: dicom2json.py [-h] [-rdf REMOVE_DICOM_FIELDS [REMOVE_DICOM_FIELDS ...]] input_file
+usage: dicom2json.py [-h] input_file [-rdf REMOVE_DICOM_FIELDS [REMOVE_DICOM_FIELDS ...]] 
 
 positional arguments:
   input_file            dicom to convert to json
@@ -58,7 +58,7 @@ optional arguments:
         * PixelData
 
 ```
-usage: json2dicom.py [-h] [-o OUTPUT_FILENAME] input_json_file
+usage: json2dicom.py [-h] input_json_file [-o OUTPUT_FILENAME] 
 
 positional arguments:
   input_json_file       json to convert to dicom
