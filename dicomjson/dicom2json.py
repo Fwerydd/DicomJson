@@ -11,8 +11,22 @@ from pydicom.errors import InvalidDicomError
 from pydicom.dataset import Dataset, FileDataset
 from constants import JsonConstants, PngConstants
 
+
 DEFAULT_OUTPUT_DIR = Path(__file__).parent / Path("output")
-logger = logging.getLogger()
+# Define Formatter
+log_formatter = logging.Formatter("%(asctime)s [%(levelname)-5.5s] %(message)s") # pylint: disable=C0103
+# Get basic logger
+logger = logging.getLogger() # pylint: disable=C0103
+logger.setLevel(logging.DEBUG)
+# Define output file logger
+file_handler = logging.FileHandler('dicom2json.log') # pylint: disable=C0103
+file_handler.setFormatter(log_formatter)
+# Define output console logger
+console_handler = logging.StreamHandler() # pylint: disable=C0103
+console_handler.setFormatter(log_formatter)
+# Associate console and file loggers to the root logger
+logger.addHandler(file_handler)
+logger.addHandler(console_handler)
 
 
 def my_json_dumps(data):
@@ -46,9 +60,9 @@ def dicom2json(input_file, remove_dicom_fields):
         elif dicom_dataset.BitsStored == 16:
             img_dtype = np.uint16
         else:
-            error = "Unrecognized DICOM BitsStored value '{}'".format(
+            bits_stored_error = "Unrecognized DICOM BitsStored value '{}'".format(
                 dicom_dataset.BitsStored)
-            raise ValueError(error)
+            raise ValueError(bits_stored_error)
 
         dicom_image = np.ndarray((dicom_dataset.Rows, dicom_dataset.Columns),
                                  img_dtype,
@@ -59,9 +73,9 @@ def dicom2json(input_file, remove_dicom_fields):
                 if dicom_dataset.get(dicom_fields_name):
                     dicom_dataset.pop(dicom_fields_name)
                 else:
-                    error = "Unrecognized DICOM field named '{}'".format(
+                    dicom_error = "Unrecognized DICOM field named '{}'".format(
                         dicom_fields_name)
-                    logger.warning(error)
+                    logger.warning(dicom_error)
 
         # Convert FileDataset to JSON object
         dicom_dataset_to_json_meta = dicom_dataset.file_meta.to_json_dict()
@@ -73,16 +87,26 @@ def dicom2json(input_file, remove_dicom_fields):
             JsonConstants.SUFFIX.value)
         output_image_filepath = output_filepath.with_suffix(
             PngConstants.SUFFIX.value)
+        output_template_filepath = (DEFAULT_OUTPUT_DIR / input_file.stem).with_suffix(
+            JsonConstants.SUFFIX.value)
 
-        # Write JSON file
-        dicom_json_file = open(output_dataset_filepath, "w")
+        # Write dataset JSON file
+        dicom_json_file = open(str(output_dataset_filepath), "w")
         dicom_json_file.write(my_json_dumps(
             {JsonConstants.META.value: dicom_dataset_to_json_meta,
              JsonConstants.DATA.value: dicom_dataset_to_json}))
         dicom_json_file.close()
-        cv2.imwrite(str(output_image_filepath), dicom_image)
-        print("Output files have been writed at: '{}' and '{}'".format(
-            output_dataset_filepath, output_image_filepath))
+        # Write image PNG file
+        cv2.imwrite(str(output_image_filepath), dicom_image) # pylint: disable=E1101
+        # Write template file
+        dicom_json_template_file = open(output_template_filepath, "w")
+        dicom_json_template_file.write(my_json_dumps([
+            {JsonConstants.TEMPLATE.value: str(output_dataset_filepath),
+             JsonConstants.IMAGE.value: str(output_image_filepath),
+             JsonConstants.OUTPUT.value: input_file.name}]))
+        dicom_json_template_file.close()
+        logger.debug("Output files for '%s' have been writed at: '%s'", \
+            str(input_file), DEFAULT_OUTPUT_DIR)
     except (FileNotFoundError,
             InvalidDicomError,
             PermissionError,
@@ -123,13 +147,13 @@ def main():
 
     input_filepath = Path(args.input_file)
     if not input_filepath.exists():
-        error = "{} does not exists, abort dicom2json execution!".format(
+        input_not_exists_error = "{} does not exists, abort dicom2json execution!".format(
             input_filepath)
-        raise ValueError(error)
+        raise ValueError(input_not_exists_error)
     if not input_filepath.is_file():
-        error = "{} is not a file, abort dicom2json execution!".format(
+        input_is_not_file_error = "{} is not a file, abort dicom2json execution!".format(
             input_filepath)
-        raise ValueError(error)
+        raise ValueError(input_is_not_file_error)
 
     try:
         dicom2json(input_filepath,
@@ -139,7 +163,8 @@ def main():
 
 
 if __name__ == "__main__":
-    """Entry point of the script
+    """
+    Entry point of the script
     """
     try:
         main()
