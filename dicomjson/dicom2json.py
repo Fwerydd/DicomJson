@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 
 import argparse
-import cv2
+from dataclasses import dataclass
 import json
 import logging
-import numpy as np
 from pathlib import Path
+import cv2
+import numpy as np
 from pydicom import dcmread
 from pydicom.errors import InvalidDicomError
 from pydicom.dataset import Dataset, FileDataset
@@ -42,13 +43,22 @@ def my_json_dumps(data):
     return json.dumps(data, indent=4, sort_keys=True)
 
 
-def dicom2json(input_file, remove_dicom_fields):
-    """dicom2json
+@dataclass
+class DicomConvertedData:
+    """Class for keeping track of converted DICOM items"""
+    image: str
+    output: str
+    template: str
+
+
+def convert_dicom_to_data(input_file, remove_dicom_fields, converted_data):
+    """
     Convert DICOM file to JSON using pydicom library
 
     Arguments:
         input_file {str} -- DICOM file location
         remove_dicom_fields {list} -- DICOM field name to not save in JSON
+        converted_data {list} -- DicomConvertedData items list
     """
     try:
         dicom_dataset = dcmread(str(input_file))
@@ -87,8 +97,6 @@ def dicom2json(input_file, remove_dicom_fields):
             JsonConstants.SUFFIX.value)
         output_image_filepath = output_filepath.with_suffix(
             PngConstants.SUFFIX.value)
-        output_template_filepath = (DEFAULT_OUTPUT_DIR / input_file.stem).with_suffix(
-            JsonConstants.SUFFIX.value)
 
         # Write dataset JSON file
         dicom_json_file = open(str(output_dataset_filepath), "w")
@@ -98,15 +106,44 @@ def dicom2json(input_file, remove_dicom_fields):
         dicom_json_file.close()
         # Write image PNG file
         cv2.imwrite(str(output_image_filepath), dicom_image) # pylint: disable=E1101
+
+        converted_data.append(DicomConvertedData(str(output_image_filepath), input_file.name, str(output_dataset_filepath)))
+    except (FileNotFoundError,
+            InvalidDicomError,
+            PermissionError,
+            UnboundLocalError) as error:
+        raise error
+
+
+def dicom2json(input_files, remove_dicom_fields):
+    """
+    Convert DICOM file to JSON using pydicom library
+
+    Arguments:
+        input_files {str} -- DICOM files location
+        remove_dicom_fields {list} -- DICOM field name to not save in JSON
+    """
+    try:
+        converted_data = []
+        for input_file in input_files:
+            convert_dicom_to_data(Path(input_file), remove_dicom_fields, converted_data)
+
+        output_template_filepath = (DEFAULT_OUTPUT_DIR / Path("dicom2json.py")).with_suffix(
+            JsonConstants.SUFFIX.value)
+
         # Write template file
+        converted_data_json_object = []
+        for data in converted_data:
+            converted_data_json_object.append({
+                JsonConstants.TEMPLATE.value: data.template,
+                JsonConstants.IMAGE.value: data.image,
+                JsonConstants.OUTPUT.value: data.output
+                })
         dicom_json_template_file = open(output_template_filepath, "w")
-        dicom_json_template_file.write(my_json_dumps([
-            {JsonConstants.TEMPLATE.value: str(output_dataset_filepath),
-             JsonConstants.IMAGE.value: str(output_image_filepath),
-             JsonConstants.OUTPUT.value: input_file.name}]))
+        dicom_json_template_file.write(my_json_dumps(converted_data_json_object))
         dicom_json_template_file.close()
-        logger.debug("Output files for '%s' have been writed at: '%s'", \
-            str(input_file), DEFAULT_OUTPUT_DIR)
+
+        logger.debug("Output files for have been writed at: '%s'", DEFAULT_OUTPUT_DIR)
     except (FileNotFoundError,
             InvalidDicomError,
             PermissionError,
@@ -127,7 +164,8 @@ def main():
 
     # Positional argument
     parser.add_argument(
-        "input_file",
+        "input_files",
+        nargs='+',
         type=str,
         help="dicom to convert to json")
 
@@ -144,20 +182,22 @@ def main():
         default=None)
 
     args = parser.parse_args()
+    input_files = args.input_files
+    remove_dicom_fields = args.remove_dicom_fields
 
-    input_filepath = Path(args.input_file)
-    if not input_filepath.exists():
-        input_not_exists_error = "{} does not exists, abort dicom2json execution!".format(
-            input_filepath)
-        raise ValueError(input_not_exists_error)
-    if not input_filepath.is_file():
-        input_is_not_file_error = "{} is not a file, abort dicom2json execution!".format(
-            input_filepath)
-        raise ValueError(input_is_not_file_error)
+    for input_file in input_files:
+        input_filepath = Path(input_file)
+        if not input_filepath.exists():
+            input_not_exists_error = "{} does not exists, abort dicom2json execution!".format(
+                input_filepath)
+            raise ValueError(input_not_exists_error)
+        if not input_filepath.is_file():
+            input_is_not_file_error = "{} is not a file, abort dicom2json execution!".format(
+                input_filepath)
+            raise ValueError(input_is_not_file_error)
 
     try:
-        dicom2json(input_filepath,
-                   args.remove_dicom_fields)
+        dicom2json(input_files, remove_dicom_fields)
     except Exception as error:
         raise error
 
