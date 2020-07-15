@@ -16,14 +16,13 @@ DEFAULT_OUTPUT_DIR = Path(__file__).parent / Path("output")
 logger = logging.getLogger()
 
 
-def convert_data_to_dicom(input_filepath, input_json, output_filename):
+def convert_data_to_dicom(input_filepath, input_json):
     """
     Convert data available in input_json to DICOM file
 
     Args:
         input_filepath (str): Input JSON file
         input_json (object): Input file description (see README.md)
-        output_filename (str): Optional, output filename
 
     Raises:
         ValueError: Invalid value in the JSON file
@@ -50,6 +49,11 @@ def convert_data_to_dicom(input_filepath, input_json, output_filename):
     if JsonConstants.DATA.value in input_json:
         current_json[JsonConstants.DATA.value].update(
             input_json[JsonConstants.DATA.value])
+
+    # Check if a specific output filename is specified
+    output_filename = None
+    if JsonConstants.OUTPUT.value in input_json:
+        output_filename = input_json[JsonConstants.OUTPUT.value]
 
     dicom_dataset = Dataset()
     dicom_meta = Dataset()
@@ -121,21 +125,20 @@ def convert_data_to_dicom(input_filepath, input_json, output_filename):
         output_filepath = (
             DEFAULT_OUTPUT_DIR / dicom_dataset.SOPInstanceUID).with_suffix(DicomConstants.SUFFIX.value)
 
-    ds = FileDataset(output_filepath.stem,
+    dataset = FileDataset(output_filepath.stem,
                         dicom_dataset, file_meta=dicom_meta, preamble=b"\0" * 128)
-    ds.is_little_endian = True
-    ds.is_implicit_VR = False
-    ds.save_as(str(output_filepath))
+    dataset.is_little_endian = True
+    dataset.is_implicit_VR = False
+    dataset.save_as(str(output_filepath))
     print("Output file has been writed at: '{}'".format(output_filepath))    
 
 
-def json2dicom(input_filepath, output_filename):
+def json2dicom(input_filepath):
     """
     Convert JSON input file to DICOM
 
     Args:
         input_filepath (str): Input JSON filepath
-        output_filename (str): Output DICOM filename
 
     Raises:
         error: Error encountered during conversion
@@ -147,12 +150,12 @@ def json2dicom(input_filepath, output_filename):
         if isinstance(input_json, list):
             for json_object in input_json:
                 try:
-                    convert_data_to_dicom(input_filepath, json_object, output_filename)
+                    convert_data_to_dicom(input_filepath, json_object)
                 except (ValueError) as error:
                     raise error
         else:
             try:
-                convert_data_to_dicom(input_filepath, input_json, output_filename)
+                convert_data_to_dicom(input_filepath, input_json)
             except (ValueError) as error:
                 raise error
     except (FileNotFoundError, SystemError) as error:
@@ -176,14 +179,6 @@ def main():
         type=str,
         help="json to convert to dicom")
 
-    # Optionals arguments
-    parser.add_argument(
-        "-o",
-        "--output_filename",
-        type=str,
-        help="output filename",
-        default=None)
-
     args = parser.parse_args()
 
     input_filepath = Path(args.input_json_file)
@@ -197,8 +192,7 @@ def main():
         raise ValueError(error)
 
     try:
-        json2dicom(input_filepath,
-                   args.output_filename)
+        json2dicom(input_filepath)
     except Exception as error:
         raise error
 
