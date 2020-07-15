@@ -16,11 +16,12 @@ class JsonConstants(Enum):
     """JsonConstants
     Constants associated to JSON data
     """
-    META = "meta"
     DATA = "data"
-    TEMPLATE = "template"
     IMAGE = "image"
+    META = "meta"
+    OUTPUT = "output"
     SUFFIX = ".json"
+    TEMPLATE = "template"
 
 
 class PngConstants(Enum):
