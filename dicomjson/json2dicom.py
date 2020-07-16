@@ -44,11 +44,11 @@ def convert_data_to_dicom(input_filepath, input_json):
     template_filepath = Path(input_json[JsonConstants.TEMPLATE.value])
     if not template_filepath.exists():
         template_not_exists = "'{}' template file does not exists, abort json2dicom execution!".format(
-            input_filepath)
+            template_filepath)
         raise ValueError(template_not_exists)
     if not template_filepath.is_file():
         template_is_not_file = "'{}' template file is not a file, abort json2dicom execution!".format(
-            input_filepath)
+            template_filepath)
         raise ValueError(template_is_not_file)
 
     template_file = open(template_filepath, "r")
