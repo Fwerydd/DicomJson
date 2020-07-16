@@ -151,7 +151,7 @@ def dicom2json(input_files, remove_dicom_fields):
             logger.debug("Convert %s", str(input_file.resolve()))
             convert_dicom_to_data(input_file, remove_dicom_fields, converted_data)
 
-        output_template_filepath = (DEFAULT_OUTPUT_DIR / Path("dicom2json.py")).with_suffix(
+        output_template_filepath = (DEFAULT_OUTPUT_DIR / Path("_dicom2json")).with_suffix(
             JsonConstants.SUFFIX.value)
 
         # Write template file
