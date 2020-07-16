@@ -9,7 +9,20 @@ from pydicom.dataset import Dataset, FileDataset
 from constants import DicomConstants, JsonConstants, PngConstants
 
 DEFAULT_OUTPUT_DIR = Path(__file__).parent / Path("output")
-logger = logging.getLogger()
+# Define Formatter
+log_formatter = logging.Formatter("%(asctime)s [%(levelname)-5.5s] %(message)s") # pylint: disable=C0103
+# Get basic logger
+logger = logging.getLogger() # pylint: disable=C0103
+logger.setLevel(logging.DEBUG)
+# Define output file logger
+file_handler = logging.FileHandler('json2dicom.log') # pylint: disable=C0103
+file_handler.setFormatter(log_formatter)
+# Define output console logger
+console_handler = logging.StreamHandler() # pylint: disable=C0103
+console_handler.setFormatter(log_formatter)
+# Associate console and file loggers to the root logger
+logger.addHandler(file_handler)
+logger.addHandler(console_handler)
 
 
 def convert_data_to_dicom(input_filepath, input_json):
@@ -24,19 +37,19 @@ def convert_data_to_dicom(input_filepath, input_json):
         ValueError: Invalid value in the JSON file
     """
     if not JsonConstants.TEMPLATE.value in input_json:
-        error = "Cannot find mandatory JSON field name '{}' in '{}'".format(
+        template_error = "Cannot find mandatory JSON field name '{}' in '{}'".format(
             JsonConstants.TEMPLATE.value, str(input_filepath))
-        raise ValueError(error)
+        raise ValueError(template_error)
 
     template_filepath = Path(input_json[JsonConstants.TEMPLATE.value])
     if not template_filepath.exists():
-        error = "'{}' template file does not exists, abort json2dicom execution!".format(
+        template_not_exists = "'{}' template file does not exists, abort json2dicom execution!".format(
             template_filepath)
-        raise ValueError(error)
+        raise ValueError(template_not_exists)
     if not template_filepath.is_file():
-        error = "'{}' template file is not a file, abort json2dicom execution!".format(
+        template_is_not_file = "'{}' template file is not a file, abort json2dicom execution!".format(
             template_filepath)
-        raise ValueError(error)
+        raise ValueError(template_is_not_file)
 
     template_file = open(template_filepath, "r")
     current_json = json.loads(template_file.read())
@@ -64,8 +77,7 @@ def convert_data_to_dicom(input_filepath, input_json):
             Dataset().from_json(json.dumps(dicom_dict))
         except (json.JSONDecodeError, TypeError, ValueError) as exception_error:
             dicom_fields_with_error.append(dicom_json_value)
-            print("Cannot add the field '{}', because the value is not standard with the VR: '{}'".format(
-                dicom_json_value, dicom_dict))
+            logger.warning("Cannot add the field '%s', because the value is not standard with the VR: '%s'", dicom_json_value, dicom_dict)
     # Remove error DICOM fields
     for dicom_field_with_error in dicom_fields_with_error:
         del data_dict[dicom_field_with_error]
@@ -126,7 +138,7 @@ def convert_data_to_dicom(input_filepath, input_json):
     dataset.is_little_endian = True
     dataset.is_implicit_VR = False
     dataset.save_as(str(output_filepath))
-    print("Output file has been writed at: '{}'".format(output_filepath))    
+    logger.debug("Output file has been writed at: '%s'", output_filepath)
 
 
 def json2dicom(input_filepath):
@@ -179,13 +191,13 @@ def main():
 
     input_filepath = Path(args.input_json_file)
     if not input_filepath.exists():
-        error = "{} does not exists, abort json2dicom execution!".format(
+        input_not_exists = "{} does not exists, abort json2dicom execution!".format(
             input_filepath)
-        raise ValueError(error)
+        raise ValueError(input_not_exists)
     if not input_filepath.is_file():
-        error = "{} is not a file, abort json2dicom execution!".format(
+        input_is_not_file = "{} is not a file, abort json2dicom execution!".format(
             input_filepath)
-        raise ValueError(error)
+        raise ValueError(input_is_not_file)
 
     try:
         json2dicom(input_filepath)
