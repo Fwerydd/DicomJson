@@ -1,15 +1,11 @@
 #!/usr/bin/env python3
 
 import argparse
-import cv2
 import json
-import numpy as np
-import logging
 from pathlib import Path
-from PIL import Image
-import pydicom
+import logging
+import cv2
 from pydicom.dataset import Dataset, FileDataset
-import sys
 from constants import DicomConstants, JsonConstants, PngConstants
 
 DEFAULT_OUTPUT_DIR = Path(__file__).parent / Path("output")
