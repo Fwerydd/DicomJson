@@ -44,11 +44,11 @@ def convert_data_to_dicom(input_filepath, input_json):
     template_filepath = Path(input_json[JsonConstants.TEMPLATE.value])
     if not template_filepath.exists():
         template_not_exists = "'{}' template file does not exists, abort json2dicom execution!".format(
-            template_filepath)
+            input_filepath)
         raise ValueError(template_not_exists)
     if not template_filepath.is_file():
         template_is_not_file = "'{}' template file is not a file, abort json2dicom execution!".format(
-            template_filepath)
+            input_filepath)
         raise ValueError(template_is_not_file)
 
     template_file = open(template_filepath, "r")
@@ -77,7 +77,7 @@ def convert_data_to_dicom(input_filepath, input_json):
             Dataset().from_json(json.dumps(dicom_dict))
         except (json.JSONDecodeError, TypeError, ValueError) as exception_error:
             dicom_fields_with_error.append(dicom_json_value)
-            logger.warning("Cannot add the field '%s', because the value is not standard with the VR: '%s'", dicom_json_value, dicom_dict)
+            logger.warning("%s cannot add the field '%s', because the value is not standard with the VR: '%s'", input_filepath, dicom_json_value, dicom_dict)
     # Remove error DICOM fields
     for dicom_field_with_error in dicom_fields_with_error:
         del data_dict[dicom_field_with_error]
@@ -87,9 +87,9 @@ def convert_data_to_dicom(input_filepath, input_json):
         dicom_meta = Dataset().from_json(
             current_json[JsonConstants.META.value])
     except (json.JSONDecodeError, TypeError, ValueError) as exception_error:
-        error = "Error encountered during JSON parsing: \"{}\", abort json2dicom execution!".format(
+        exception_error = "Error encountered during JSON parsing: \"{}\", abort json2dicom execution!".format(
             exception_error)
-        raise ValueError(error)
+        raise ValueError(exception_error)
 
     # Override image in the DICOM if 'image' key is present
     if JsonConstants.IMAGE.value in input_json:
@@ -98,13 +98,13 @@ def convert_data_to_dicom(input_filepath, input_json):
             if image_json_data:
                 image_filepath = Path(image_json_data)
                 if not image_filepath.exists():
-                    error = "'{}' image file does not exists, abort json2dicom execution!".format(
+                    image_not_exists = "'{}' image file does not exists, abort json2dicom execution!".format(
                         image_filepath)
-                    raise ValueError(error)
+                    raise ValueError(image_not_exists)
             if not image_filepath.is_file():
-                error = "'{}' image is not a file, abort json2dicom execution!".format(
+                image_is_not_file = "'{}' image is not a file, abort json2dicom execution!".format(
                     image_filepath)
-                raise ValueError(error)
+                raise ValueError(image_is_not_file)
 
             image = cv2.imread(str(image_filepath),
                                 flags=cv2.IMREAD_UNCHANGED)
@@ -113,8 +113,7 @@ def convert_data_to_dicom(input_filepath, input_json):
             if len(shape) < 3:
                 bit_depth = 8 * image.dtype.itemsize
             else:
-                error = "Cannot manage image with bit depth > 16 bits"
-                raise ValueError(error)
+                raise ValueError("Cannot manage image with bit depth > 16 bits")
 
             dicom_dataset.BitsAllocated = bit_depth
             dicom_dataset.BitsStored = bit_depth
