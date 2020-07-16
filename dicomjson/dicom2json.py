@@ -62,6 +62,17 @@ def convert_dicom_to_data(input_file, remove_dicom_fields, converted_data):
     try:
         dicom_dataset = dcmread(str(input_file))
 
+        # Extract DICOM data
+        rows = dicom_dataset.get('Rows')
+        columns = dicom_dataset.get('Columns')
+        pixel_data = dicom_dataset.get('PixelData')
+        bits_stored = dicom_dataset.get('BitsStored')
+        pixel_data_length = None
+        pixel_data_expected_length = None
+        if pixel_data and rows and columns and bits_stored:
+            pixel_data_length = len(pixel_data)
+            pixel_data_expected_length = rows * columns * (bits_stored / 8)
+
         # Format output filepath
         output_filepath = (DEFAULT_OUTPUT_DIR / input_file.stem)
         output_dataset_filepath = output_filepath.with_suffix(
@@ -69,58 +80,52 @@ def convert_dicom_to_data(input_file, remove_dicom_fields, converted_data):
         output_image_filepath = output_filepath.with_suffix(
             PngConstants.SUFFIX.value)
 
+        # Remove DICOM fields specified by the user
+        if remove_dicom_fields:
+            for dicom_fields_name in remove_dicom_fields:
+                if dicom_dataset.get(dicom_fields_name):
+                    dicom_dataset.pop(dicom_fields_name)
+                else:
+                    dicom_error = "Unrecognized DICOM field named '{}'".format(
+                        dicom_fields_name)
+                    logger.warning(dicom_error)
+
+        # Write dataset JSON file
+        dicom_dataset_to_json_meta = dicom_dataset.file_meta.to_json_dict()
+        dicom_dataset_to_json = dicom_dataset.to_json_dict()
+        dicom_json_file = open(str(output_dataset_filepath), "w")
+        dicom_json_file.write(my_json_dumps(
+            {
+                JsonConstants.META.value: dicom_dataset_to_json_meta,
+                JsonConstants.DATA.value: dicom_dataset_to_json
+            }))
+        dicom_json_file.close()
+
         # Create image only if Rows, Columns, BitsStored and PixelData are filled
-        if dicom_dataset.Rows and \
-            dicom_dataset.Columns and \
-            dicom_dataset.PixelData and \
-            dicom_dataset.BitsStored:
+        if rows and columns and pixel_data and bits_stored:
             # Extract image from PixelData DICOM file
             img_dtype = None
-            if dicom_dataset.BitsStored == 8:
+            if bits_stored == 8:
                 img_dtype = np.uint8
-            elif dicom_dataset.BitsStored == 16:
+            elif bits_stored == 16:
                 img_dtype = np.uint16
             else:
-                bits_stored_error = "Unrecognized DICOM BitsStored value '{}'".format(
-                    dicom_dataset.BitsStored)
+                bits_stored_error = "Unrecognized DICOM BitsStored value '{}'".format(bits_stored)
                 raise ValueError(bits_stored_error)
 
             # Check buffer size consistancy
-            pixel_data_length = len(dicom_dataset.PixelData)
-            pixel_data_expected_length = dicom_dataset.Rows * dicom_dataset.Columns * (dicom_dataset.BitsStored / 8)
             if not pixel_data_length == int(pixel_data_expected_length):
                 logger.warning("%s buffer size is not consistent", str(input_file.resolve()))
                 converted_data.append(DicomConvertedData(None, input_file.name, str(output_dataset_filepath)))
                 return
 
-            dicom_image = np.ndarray((dicom_dataset.Rows, dicom_dataset.Columns),
-                                     img_dtype,
-                                     dicom_dataset.PixelData)
-
-            if remove_dicom_fields:
-                for dicom_fields_name in remove_dicom_fields:
-                    if dicom_dataset.get(dicom_fields_name):
-                        dicom_dataset.pop(dicom_fields_name)
-                    else:
-                        dicom_error = "Unrecognized DICOM field named '{}'".format(
-                            dicom_fields_name)
-                        logger.warning(dicom_error)
-
-            # Convert FileDataset to JSON object
-            dicom_dataset_to_json_meta = dicom_dataset.file_meta.to_json_dict()
-            dicom_dataset_to_json = dicom_dataset.to_json_dict()
-
-            # Write dataset JSON file
-            dicom_json_file = open(str(output_dataset_filepath), "w")
-            dicom_json_file.write(my_json_dumps(
-                {
-                    JsonConstants.META.value: dicom_dataset_to_json_meta,
-                    JsonConstants.DATA.value: dicom_dataset_to_json
-                }))
-            dicom_json_file.close()
             # Write image PNG file
+            dicom_image = np.ndarray((rows, columns),
+                                     img_dtype,
+                                     pixel_data)
             cv2.imwrite(str(output_image_filepath), dicom_image) # pylint: disable=E1101
 
+            # Add full data in the main list
             converted_data.append(DicomConvertedData(str(output_image_filepath), input_file.name, str(output_dataset_filepath)))
         else:
             logger.warning("%s has no Rows or Columns or BitsStored or PixelData DICOM fields", str(input_file.resolve()))
