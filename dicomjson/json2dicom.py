@@ -118,8 +118,6 @@ def convert_data_to_dicom(input_filepath, input_json):
             dicom_dataset.BitsAllocated = bit_depth
             dicom_dataset.BitsStored = bit_depth
             dicom_dataset.HighBits = bit_depth - 1
-            dicom_dataset.WindowCenter = pow(2, bit_depth - 1)
-            dicom_dataset.WindowWidth = pow(2, bit_depth) - 1
             dicom_dataset.Rows = shape[0]
             dicom_dataset.Columns = shape[1]
             dicom_dataset.PixelData = image
