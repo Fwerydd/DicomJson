@@ -39,7 +39,7 @@ def my_json_dumps(data):
     Returns:
         str -- Data beautified
     """
-    return json.dumps(data, indent=4, sort_keys=True)
+    return json.dumps(data, indent=2, sort_keys=True)
 
 
 @dataclass
