@@ -25,11 +25,19 @@ optional arguments:
 ```
 
 **json2dicom**
-* Convert one *.json file to one *.dcm file
+* Convert DICOM object(s) describe in a json file
   * You can find an example in the 'input' folder named 'test.json'
-    * This file contains the following entries:
+    * This file contains the following entries for one object. Note: You can have only one object or a array of objects in this file!
       * "template": Path to JSON file extracted from dicom2json.py script
         * It will be used as template for your DICOM generation
+      * "image": Path to PNG file extracted from dicom2json.py script
+        * It will be used as image for your DICOM generation. This image override the following DICOM fields
+         * BitsAllocated
+         * BitsStored
+         * HighBits
+         * Rows
+         * Columns
+         * PixelData
       * "data": DICOM data described as you can see in the dicom2json.py output file. If a data is present in this field, you'll override the DICOM field value available in "template".
         ```
         For example, if you want to override PatientName DICOM field value, you need to write in your *.json file:
@@ -46,17 +54,6 @@ optional arguments:
           }
         }
         ```
-      * "meta": DICOM metadata described as you can see in the dicom2json.py output file. If a data is present in this field, you'll override the DICOM field value available in "template".
-      * "image": Image filepath to override the following DICOM fields:
-        * BitsAllocated
-        * BitsStored
-        * HighBits
-        * WindowCenter
-        * WindowWidth
-        * Rows
-        * Columns
-        * PixelData
-
 ```
 usage: json2dicom.py [-h] input_json_file [-o OUTPUT_FILENAME] 
 
@@ -64,9 +61,7 @@ positional arguments:
   input_json_file       json to convert to dicom
 
 optional arguments:
-  -h, --help            show this help message and exit       
-  -o OUTPUT_FILENAME, --output_filename OUTPUT_FILENAME       
-                        output filename
+  -h, --help            show this help message and exit
 ```
 
 Documentation
