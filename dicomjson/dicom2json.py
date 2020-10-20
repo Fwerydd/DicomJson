@@ -4,29 +4,23 @@ import argparse
 from dataclasses import dataclass
 import json
 import logging
+from logging import config
 from pathlib import Path
 import cv2
 import numpy as np
+import yaml
 from pydicom import dcmread
 from pydicom.errors import InvalidDicomError
 from constants import DicomConstants, JsonConstants, PngConstants
 
-
 DEFAULT_OUTPUT_DIR = Path(__file__).parent / Path("output")
-# Define Formatter
-log_formatter = logging.Formatter("%(asctime)s [%(levelname)-5.5s] %(message)s") # pylint: disable=C0103
+
+# Load logger configuration from YAML file
+with open(Path(__file__).parent / Path("logger_config.yaml"), 'rt') as f:
+    config_data = yaml.safe_load(f.read())
+    config.dictConfig(config_data)
 # Get basic logger
-logger = logging.getLogger() # pylint: disable=C0103
-logger.setLevel(logging.DEBUG)
-# Define output file logger
-file_handler = logging.FileHandler('dicom2json.log') # pylint: disable=C0103
-file_handler.setFormatter(log_formatter)
-# Define output console logger
-console_handler = logging.StreamHandler() # pylint: disable=C0103
-console_handler.setFormatter(log_formatter)
-# Associate console and file loggers to the root logger
-logger.addHandler(file_handler)
-logger.addHandler(console_handler)
+logger = logging.getLogger('root')
 
 
 def my_json_dumps(data):
@@ -110,26 +104,33 @@ def convert_dicom_to_data(input_file, remove_dicom_fields, converted_data):
             elif bits_stored == 16:
                 img_dtype = np.uint16
             else:
-                bits_stored_error = "Unrecognized DICOM BitsStored value '{}'".format(bits_stored)
+                bits_stored_error = "Unrecognized DICOM BitsStored value '{}'".format(
+                    bits_stored)
                 raise ValueError(bits_stored_error)
 
             # Check buffer size consistancy
             if not pixel_data_length == int(pixel_data_expected_length):
-                logger.warning("%s buffer size is not consistent", str(input_file.resolve()))
-                converted_data.append(DicomConvertedData(None, input_file.name, str(output_dataset_filepath)))
+                logger.error("%s buffer size is not consistent",
+                             str(input_file.resolve()))
+                converted_data.append(DicomConvertedData(
+                    None, input_file.name, str(output_dataset_filepath)))
                 return
 
             # Write image PNG file
             dicom_image = np.ndarray((rows, columns),
                                      img_dtype,
                                      pixel_data)
-            cv2.imwrite(str(output_image_filepath), dicom_image) # pylint: disable=E1101
+            cv2.imwrite(str(output_image_filepath),
+                        dicom_image)  # pylint: disable=E1101
 
             # Add full data in the main list
-            converted_data.append(DicomConvertedData(str(output_image_filepath), input_file.name, str(output_dataset_filepath)))
+            converted_data.append(DicomConvertedData(
+                str(output_image_filepath), input_file.name, str(output_dataset_filepath)))
         else:
-            logger.warning("%s has no Rows or Columns or BitsStored or PixelData DICOM fields", str(input_file.resolve()))
-            converted_data.append(DicomConvertedData(None, input_file.name, str(output_dataset_filepath)))
+            logger.warning("%s has no Rows or Columns or BitsStored or PixelData DICOM fields", str(
+                input_file.resolve()))
+            converted_data.append(DicomConvertedData(
+                None, input_file.name, str(output_dataset_filepath)))
     except (FileNotFoundError,
             InvalidDicomError,
             PermissionError,
@@ -149,7 +150,8 @@ def dicom2json(input_files, remove_dicom_fields):
         converted_data = []
         for input_file in input_files:
             logger.debug("Convert %s", str(input_file.resolve()))
-            convert_dicom_to_data(input_file, remove_dicom_fields, converted_data)
+            convert_dicom_to_data(
+                input_file, remove_dicom_fields, converted_data)
 
         output_template_filepath = (DEFAULT_OUTPUT_DIR / Path("_dicom2json")).with_suffix(
             JsonConstants.SUFFIX.value)
@@ -161,12 +163,14 @@ def dicom2json(input_files, remove_dicom_fields):
                 JsonConstants.TEMPLATE.value: data.template,
                 JsonConstants.IMAGE.value: data.image,
                 JsonConstants.OUTPUT.value: data.output
-                })
+            })
         dicom_json_template_file = open(output_template_filepath, "w")
-        dicom_json_template_file.write(my_json_dumps(converted_data_json_object))
+        dicom_json_template_file.write(
+            my_json_dumps(converted_data_json_object))
         dicom_json_template_file.close()
 
-        logger.debug("Output files for have been writed at: '%s'", DEFAULT_OUTPUT_DIR)
+        logger.debug("Output files for have been writed at: '%s'",
+                     DEFAULT_OUTPUT_DIR)
     except (FileNotFoundError,
             InvalidDicomError,
             PermissionError,
@@ -218,7 +222,8 @@ def main():
         if input_filepath.is_file():
             files.append(input_filepath)
         elif input_filepath.is_dir():
-            files.extend(list(input_filepath.glob('*' + DicomConstants.SUFFIX.value)))
+            files.extend(list(input_filepath.glob(
+                '*' + DicomConstants.SUFFIX.value)))
         else:
             input_is_not_file_error = "{} is not a file, abort dicom2json execution!".format(
                 input_filepath)

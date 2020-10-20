@@ -4,25 +4,20 @@ import argparse
 import json
 from pathlib import Path
 import logging
+from logging import config
+import yaml
 import cv2
 from pydicom.dataset import Dataset, FileDataset
 from constants import DicomConstants, JsonConstants, PngConstants
 
 DEFAULT_OUTPUT_DIR = Path(__file__).parent / Path("output")
-# Define Formatter
-log_formatter = logging.Formatter("%(asctime)s [%(levelname)-5.5s] %(message)s") # pylint: disable=C0103
+
+# Load logger configuration from YAML file
+with open(Path(__file__).parent / Path("logger_config.yaml"), 'rt') as f:
+    config_data = yaml.safe_load(f.read())
+    config.dictConfig(config_data)
 # Get basic logger
-logger = logging.getLogger() # pylint: disable=C0103
-logger.setLevel(logging.DEBUG)
-# Define output file logger
-file_handler = logging.FileHandler('json2dicom.log') # pylint: disable=C0103
-file_handler.setFormatter(log_formatter)
-# Define output console logger
-console_handler = logging.StreamHandler() # pylint: disable=C0103
-console_handler.setFormatter(log_formatter)
-# Associate console and file loggers to the root logger
-logger.addHandler(file_handler)
-logger.addHandler(console_handler)
+logger = logging.getLogger('root')
 
 
 def convert_data_to_dicom(input_filepath, input_json):
@@ -77,7 +72,8 @@ def convert_data_to_dicom(input_filepath, input_json):
             Dataset().from_json(json.dumps(dicom_dict))
         except (json.JSONDecodeError, TypeError, ValueError) as exception_error:
             dicom_fields_with_error.append(dicom_json_value)
-            logger.warning("%s cannot add the field '%s', because the value is not standard with the VR: '%s'", input_filepath, dicom_json_value, dicom_dict)
+            logger.warning("%s cannot add the field '%s', because the value is not standard with the VR: '%s'",
+                           input_filepath, dicom_json_value, dicom_dict)
     # Remove error DICOM fields
     for dicom_field_with_error in dicom_fields_with_error:
         del data_dict[dicom_field_with_error]
@@ -107,13 +103,14 @@ def convert_data_to_dicom(input_filepath, input_json):
                 raise ValueError(image_is_not_file)
 
             image = cv2.imread(str(image_filepath),
-                                flags=cv2.IMREAD_UNCHANGED)
+                               flags=cv2.IMREAD_UNCHANGED)
             shape = image.shape
             bit_depth = None
             if len(shape) < 3:
                 bit_depth = 8 * image.dtype.itemsize
             else:
-                raise ValueError("Cannot manage image with bit depth > 16 bits")
+                raise ValueError(
+                    "Cannot manage image with bit depth > 16 bits")
 
             dicom_dataset.BitsAllocated = bit_depth
             dicom_dataset.BitsStored = bit_depth
@@ -131,7 +128,7 @@ def convert_data_to_dicom(input_filepath, input_json):
             DEFAULT_OUTPUT_DIR / dicom_dataset.SOPInstanceUID).with_suffix(DicomConstants.SUFFIX.value)
 
     dataset = FileDataset(output_filepath.stem,
-                        dicom_dataset, file_meta=dicom_meta, preamble=b"\0" * 128)
+                          dicom_dataset, file_meta=dicom_meta, preamble=b"\0" * 128)
     dataset.is_little_endian = True
     dataset.is_implicit_VR = False
     dataset.save_as(str(output_filepath))

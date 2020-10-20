@@ -1,4 +1,5 @@
-pydicom == 1.4.1
-opencv-python == 4.2.0.32
-numpy == 1.18.1
-Pillow == 7.0.0
+pydicom == 2.0.0
+opencv-python == 4.4.0.44
+numpy == 1.19.2
+Pillow == 8.0.0
+PyYAML == 5.3.1
